@@ -1,0 +1,68 @@
+common:
+  mode: evaluate
+  config_name: global_local_topic_kbpmix
+  base_dir: /home/nobody/code/EasyECR
+  model_dir: /home/nobody/code/ecr-code/${common.config_name}_model
+  cache_dir: /home/nobody/code/ecr-code/${common.config_name}_cache
+  log_dir: /home/nobody/code/ecr-code/${common.config_name}_log
+
+ecr_data:
+  dataset_name: kbpmix
+  train_path: /data/dev/ecr-data/KBP_Eng_201520162017/train_filtered.json
+  dev_path: /data/dev/ecr-data/KBP_Eng_201520162017/dev_filtered.json
+  test_path: /data/dev/ecr-data/KBP_Eng_201520162017/test_filtered.json
+
+
+EcrFramework1:
+  output_tag: event_id_pred_ecr_framework1
+  parameters:
+    evaluate_topic: doc_id
+    predict_topic: doc_id
+    main_metric: CoNLL
+    ecr_model:
+      output_tag: distance
+      parameters:
+        common: 
+          mode: ${common.mode}
+          train_topic: doc_id
+          predict_topic: doc_id
+          evaluate_topic: doc_id
+          model_dir: ${common.model_dir}/ecr_framework1
+          bast_model_file_name: best.ckpt
+        module:
+          doc_encoder: allenai/longformer-base-4096
+          mention_encoder: bert-base-cased
+          num_classes: 19
+          weight_decay: 0.05
+          optimizer: adam
+          learning_rate: 0.000001
+          num_warmup_steps: 0.
+          adam_beta1: 0.9
+          adam_beta2: 0.98
+          adam_epsilon: 0.00000001
+          model_checkpoint:  /home/nobody/code/ecr-code/global_local_topic_kbpmix_model/ecr_framework1/best.ckpt
+        dataset: 
+        dataloader: 
+          train_batch_size: 1
+          evaluate_batch_size: 1
+          predict_batch_size: 1
+          num_workers: 1
+        trainer_parameters:
+          accelerator: gpu
+          accumulate_grad_batches: 20
+          gradient_clip_val: 10.0
+          check_val_every_n_epoch: 1
+          num_sanity_val_steps: 0
+          precision: 16
+          max_epochs: 10
+          default_root_dir: /home/nobody/code/ecr-code/global_local_topic_kbpmix_log/pl
+    ecr_model_output_tag: distance
+    cluster_model:
+      model_name: EcrConnectedComponent
+      parameters:
+        distance_threshold: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    evaluator:
+      parameters:
+        average_over_topic: False
+        metric_names: ['mentions', 'muc', 'bcub', 'ceafe', 'lea']
+        keep_singletons: False

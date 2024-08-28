@@ -1,0 +1,151 @@
+common:
+  mode: evaluate
+  config_name: corefprompt_kbpmix
+  base_dir: /home/nobody/code/EasyECR
+  model_dir: /home/nobody/code/ecr-code/${common.config_name}_model
+  cache_dir: /home/nobody/code/ecr-code/${common.config_name}_cache
+  log_dir: /home/nobody/code/ecr-code/${common.config_name}_log
+
+ecr_data:
+  dataset_name: kbpmix
+  train_path: /home/nobody/code/prompt-event-coref-emnlp2023/data/train_filtered.json
+  dev_path: /home/nobody/code/prompt-event-coref-emnlp2023/data/dev_filtered.json
+  test_path: /home/nobody/code/prompt-event-coref-emnlp2023/data/test_filtered.json
+
+EcrFramework1:
+  output_tag: event_id_pred_ecr_framework1
+  parameters:
+    evaluate_topic: doc_id
+    predict_topic: doc_id
+    main_metric: CoNLL
+    ecr_model:
+      output_tag: distance
+      parameters:
+        common: 
+          mode: ${common.mode}
+          train_topic: doc_id
+          predict_topic: doc_id
+          evaluate_topic: doc_id
+          model_dir: ${common.model_dir}/ecr_framework1
+          bast_model_file_name: best.ckpt
+        module:
+          transformer_model: roberta-large
+          matching_style: product_cosine
+          num_labels: 37
+          no_decay_params: []
+          optimizer: adam
+          learning_rate: 0.000001
+          weight_decay: 0.05
+          adam_beta1: 0.9
+          adam_beta2: 0.98
+          adam_epsilon: 0.00000001
+          model_checkpoint: /home/nobody/code/ecr-code/corefprompt_kbpmix_model/ecr_framework1/best.ckpt
+        dataset:
+          train_simi_file:  /home/nobody/code/prompt-event-coref-emnlp2023/data/KnowledgeExtraction/simi_files/simi_omni_train_related_info_0.75.json
+          train_cos_file: /home/nobody/code/prompt-event-coref-emnlp2023/data/train_filtered_with_cos.json
+          dev_simi_file: /home/nobody/code/prompt-event-coref-emnlp2023/data/KnowledgeExtraction/simi_files/simi_omni_dev_related_info_0.75.json
+          test_simi_file: /home/nobody/code/prompt-event-coref-emnlp2023/data/KnowledgeExtraction/simi_files/simi_omni_gold_test_related_info_0.75.json
+          prompt_type: hn
+          select_arg_strategy: no_filter
+          model_type: roberta
+          max_seq_length: 512
+          sample_strategy: random
+        dataloader:
+          train_batch_size: 4
+          evaluate_batch_size: 4
+          predict_batch_size: 4
+          num_workers: 1
+        trainer_parameters:
+          accelerator: gpu
+          accumulate_grad_batches: 40
+          gradient_clip_val: 10.0
+          check_val_every_n_epoch: 1
+          num_sanity_val_steps: 0
+          max_epochs: 10
+          default_root_dir: /home/nobody/code/ecr-code/corefprompt_kbpmix_log/ecr_framework1/pl
+    ecr_model_output_tag: distance
+    cluster_model:
+      model_name: EcrConnectedComponent
+      parameters:
+        distance_threshold: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    evaluator:
+      parameters:
+        average_over_topic: False
+        metric_names: ['mentions', 'muc', 'bcub', 'ceafe', 'lea']
+        keep_singletons: False
+
+
+TriggerDetection:
+  parameters:
+    common:
+      mode: predict
+      model_dir: /home/nobody/code/ecr-code/triggerdetection_kbpmix_model/trigger_detection
+      model_name: trigger_detection
+      best_model_filename: trigger_detection.ckpt
+    module:
+      transformer_model: allenai/longformer-large-4096
+      num_labels: 37
+      no_decay_params: []
+      optimizer: adam
+      learning_rate: 0.00001
+      weight_decay: 0.05
+      adam_beta1: 0.9
+      adam_beta2: 0.98
+      adam_epsilon: 0.0000001
+      model_checkpoint: /home/nobody/code/ecr-code/triggerdetection_kbpmix_model/trigger_detection/trigger_detection.ckpt
+    trainer_parameters:
+      accelerator: gpu
+      accumulate_grad_batches: 5
+      gradient_clip_val: 10.0
+      check_val_every_n_epoch: 1
+      num_sanity_val_steps: 0
+      precision: 16
+      max_epochs: 50
+      default_root_dir: /home/nobody/code/ecr-code/triggerdetection_kbpmix_log/pl
+    dataset:
+      max_seq_length: 3072
+    dataloader:
+      train_batch_size: 1
+      evaluate_batch_size: 1
+      predict_batch_size: 1
+      num_workers: 1
+    output:
+      dir: /home/nobody/code/ecr-code/triggerdetection_kbpmix_output/
+      file_name: epoch_test_pred_events.json
+
+SampleSimi:
+  parameters:
+    common:
+      mode: predict
+      model_dir: /home/nobody/code/ecr-code/samplesimi_kbpmix_model/sample_simi
+      model_name: sample_simi
+      best_model_filename: sample_simi.ckpt
+    module:
+      transformer_model: allenai/longformer-large-4096
+      no_decay_params: []
+      optimizer: adam
+      learning_rate: 0.00005
+      weight_decay: 0.05
+      adam_beta1: 0.9
+      adam_beta2: 0.98
+      adam_epsilon: 0.0000001
+      model_checkpoint: /home/nobody/code/ecr-code/samplesimi_kbpmix_model/sample_simi/sample_simi.ckpt
+    trainer_parameters:
+      accelerator: gpu
+      accumulate_grad_batches: 5
+      gradient_clip_val: 10.0
+      check_val_every_n_epoch: 1
+      num_sanity_val_steps: 0
+      precision: 16
+      max_epochs: 20
+      default_root_dir: /home/nobody/code/ecr-code/samplesimi_kbpmix_log/pl
+    dataset:
+      max_seq_length: 3072
+    dataloader:
+      train_batch_size: 1
+      evaluate_batch_size: 1
+      predict_batch_size: 1
+      num_workers: 1
+    output:
+      dir: /home/nobody/code/ecr-code/samplesimi_kbpmix_output/
+      file_name: train_filtered_with_cos.json

@@ -1,0 +1,38 @@
+common:
+  config_name: lemma_distance_ecbplus
+  base_dir: /home/nobody/project/EasyECR
+  mode: train
+  model_dir: ${common.base_dir}/${common.config_name}_model
+  cache_dir: ${common.base_dir}/${common.config_name}_cache
+  log_dir: ${common.base_dir}/${common.config_name}_log
+
+ecr_data:
+  dataset_name: ecbplus
+  total_path: /data/dev/ecr-data/ECB+_LREC2014
+
+DocTagger:
+  output_tag: doc_predicted_topic
+
+EcrFramework1:
+  output_tag: event_id_predict_ecr_framework1
+  parameters:
+    evaluate_topic: doc_topic
+    predict_topic: doc_predicted_topic
+    main_metric: CoNLL
+    ecr_model:
+      parameters:
+        train_topic: doc_topic
+        predict_topic: doc_predicted_topic
+        sent_sim_threshold: 0.05
+      output_tag: distance_lemma
+    ecr_model_output_tag: distance_lemma
+    cluster_model:
+      name: EcrConnectedComponent
+      parameters:
+        distance_threshold:
+        best_distance: 0.5
+    evaluator:
+      parameters:
+        average_over_topic: False
+        metric_names: ['mentions', 'muc', 'bcub', 'ceafe', 'lea']
+        keep_singletons: True

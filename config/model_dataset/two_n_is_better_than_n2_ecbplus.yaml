@@ -1,0 +1,87 @@
+common:
+  config_name: two_n_is_better_than_n2_ecbplus
+  base_dir: /home/nobody/code/EasyECR
+  mode: evaluate
+  model_dir: /home/nobody/code/ecr-code/${common.config_name}_model
+  cache_dir: /home/nobody/code/ecr-code/${common.config_name}_cache
+  log_dir: /home/nobody/code/ecr-code/${common.config_name}_log
+
+ecr_data:
+  dataset_name: ecbplus
+  total_path: /data/dev/ecr-data/ECB+_LREC2014
+  train_path: 
+  dev_path:
+  test_path:
+
+DocTagger:
+  output_tag: doc_predicted_topic
+
+EcrFramework1:
+  output_tag: event_id_predict_ecr_framework1
+  parameters:
+    evaluate_topic: doc_topic
+    predict_topic: doc_topic
+    main_metric: CoNLL
+    ecr_model:
+      parameters:
+        train_topic: doc_topic
+        predict_topic: doc_topic
+        sent_sim_threshold: 0.05
+      output_tag: distance_lemma
+    ecr_model_output_tag: distance_lemma
+    cluster_model:
+      parameters:
+        distance_threshold: 0.5
+        best_distance: 0.5
+    evaluator:
+      parameters:
+        average_over_topic: False
+        metric_names: ['mentions', 'muc', 'bcub', 'ceafe', 'lea']
+        keep_singletons: False
+
+EcrFramework2:
+  output_tag: event_id_predict_ecr_framework2
+  parameters:
+    evaluate_topic: doc_topic
+    predict_topic: event_id_predict_ecr_framework1
+    main_metric: CoNLL
+    ecr_model:
+      parameters:
+        common:
+          mode: ${common.mode}
+          train_topic: doc_topic
+          predict_topic: event_id_predict_ecr_framework1
+          evaluate_topic: doc_topic
+          model_dir: ${common.model_dir}/ecr_framework2/
+          best_model_file_name: best.ckpt
+          framework1_tag: distance_lemma
+          local_context: doc
+          global_context: None
+        module:
+          transformer_model: roberta-base
+          optimizer: adam
+          lr_lm: 0.000001
+          lr_class: 0.00001
+          model_checkpoint: ${EcrFramework2.parameters.ecr_model.parameters.common.model_dir}/best.ckpt
+        dataset:
+        dataloader:
+          train_batch_size: 20
+          evaluate_batch_size: 64
+          predict_batch_size: 64
+          num_workers: 1
+        trainer_parameters:
+          gradient_clip_val: 10.0
+          check_val_every_n_epoch: 1
+          max_epochs: 10
+          default_root_dir: ${common.log_dir}/pl
+    ecr_model_output_tag: distance_ecr_framework2
+    cluster_model:
+      model_name: EcrAgglomerativeClustering
+      parameters:
+        distance_threshold: [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+        best_distance:
+    evaluator:
+      parameters:
+        average_over_topic: False
+        metric_names: ['mentions', 'muc', 'bcub', 'ceafe', 'lea']
+        keep_singletons: False

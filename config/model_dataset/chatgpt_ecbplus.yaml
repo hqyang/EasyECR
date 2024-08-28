@@ -1,0 +1,37 @@
+common:
+  mode: evaluate
+  model_dir: /home/nobody/project/EasyECR/chatgpt_ecbplus_model
+  cache_dir: /home/nobody/project/EasyECR/chatgpt_ecbplus_cache
+  log_dir: /home/nobody/project/EasyECR/chatgpt_ecbplus_log
+
+topic:
+  train_topic: doc_topic
+  predict_topic: doc_subtopic
+  evaluate_topic: doc_subtopic
+
+ecr_framework:
+  main_metric: CoNLL
+
+ecr_data:
+  dataset_name: ecbplus
+  dataset_train_dir: /home/nobody/project/ecr-data/data/ECB+_LREC2014_train/raw_data
+  dataset_dev_dir: /home/nobody/project/ecr-data/data/ECB+_LREC2014_dev/raw_data
+  dataset_test_dir: /home/nobody/project/ecr-data/data/ECB+_LREC2014_test/raw_data
+
+ecr_model:
+  model_name: chatgpt
+  chatgpt:
+    train_topic: doc_topic
+    predict_topic: doc_subtopic
+    model: gpt-3.5-turbo-0613
+    api_key:
+
+cluster_model:
+  model_name: EcrConnectedComponent
+  parameters:
+    distance_threshold: 0.5
+
+evaluator:
+  average_over_topic: True
+  metric_names: ['mentions', 'muc', 'bcub', 'ceafe', 'lea']
+  keep_singletons: True
